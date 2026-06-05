@@ -12,6 +12,8 @@ fn git(repo: &Path, args: &[&str]) {
         .env("GIT_AUTHOR_EMAIL", "t@example.com")
         .env("GIT_COMMITTER_NAME", "t")
         .env("GIT_COMMITTER_EMAIL", "t@example.com")
+        .env("GIT_CONFIG_NOSYSTEM", "1")
+        .env("HOME", repo)
         .status()
         .unwrap();
     assert!(status.success(), "git {:?} failed", args);
@@ -25,7 +27,7 @@ fn working_spec() -> DiffSpec {
 fn detects_git_repo() {
     let dir = tempfile::tempdir().unwrap();
     assert!(!is_git_repo(dir.path()));
-    git(dir.path(), &["init", "-q"]);
+    git(dir.path(), &["init", "-q", "-b", "main"]);
     assert!(is_git_repo(dir.path()));
 }
 
@@ -33,7 +35,7 @@ fn detects_git_repo() {
 fn loads_working_tree_diff_through_real_git() {
     let dir = tempfile::tempdir().unwrap();
     let p = dir.path();
-    git(p, &["init", "-q"]);
+    git(p, &["init", "-q", "-b", "main"]);
     fs::write(p.join("a.txt"), "one\ntwo\n").unwrap();
     git(p, &["add", "a.txt"]);
     git(p, &["commit", "-q", "-m", "init"]);
@@ -51,7 +53,7 @@ fn loads_working_tree_diff_through_real_git() {
 fn empty_diff_yields_no_files() {
     let dir = tempfile::tempdir().unwrap();
     let p = dir.path();
-    git(p, &["init", "-q"]);
+    git(p, &["init", "-q", "-b", "main"]);
     fs::write(p.join("a.txt"), "x\n").unwrap();
     git(p, &["add", "a.txt"]);
     git(p, &["commit", "-q", "-m", "init"]);

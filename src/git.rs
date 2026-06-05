@@ -51,6 +51,9 @@ pub fn is_git_repo(repo: &Path) -> bool {
 
 /// spec に従って git diff を実行し、構造化モデルを返す。
 pub fn load_file_diffs(spec: &DiffSpec, repo: &Path) -> Result<Vec<FileDiff>> {
+    if spec.scope == Scope::Ref && spec.target.is_none() {
+        bail!("Scope::Ref requires a target ref");
+    }
     let args = git_diff_args(spec);
     let output = Command::new("git")
         .args(&args)
@@ -107,5 +110,13 @@ mod tests {
     fn merge_base_args() {
         let a = git_diff_args(&spec(Scope::Range, Some("feature"), Some("main"), true));
         assert_eq!(a, vec!["diff", "--no-color", "--no-ext-diff", "-M", "--merge-base", "main", "feature"]);
+    }
+
+    #[test]
+    fn ref_without_target_is_error() {
+        let dir = std::env::temp_dir();
+        let s = spec(Scope::Ref, None, None, false);
+        let err = load_file_diffs(&s, &dir).unwrap_err();
+        assert!(err.to_string().contains("requires a target"));
     }
 }
