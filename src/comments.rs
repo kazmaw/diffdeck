@@ -38,7 +38,7 @@ pub fn save(path: &Path, file: &CommentFile) -> Result<()> {
         std::fs::create_dir_all(parent).with_context(|| format!("mkdir {}", parent.display()))?;
     }
     let json = serde_json::to_string_pretty(file)?;
-    std::fs::write(path, json).with_context(|| format!("write {}", path.display()))?;
+    std::fs::write(path, format!("{json}\n")).with_context(|| format!("write {}", path.display()))?;
     Ok(())
 }
 
@@ -79,6 +79,15 @@ mod tests {
         let loaded = load(&path).unwrap().unwrap();
         assert_eq!(loaded, file);
         assert_eq!(loaded.schema, "diffdeck/v1");
+    }
+
+    #[test]
+    fn load_corrupt_returns_err() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = comments_path(dir.path());
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(&path, b"not json").unwrap();
+        assert!(load(&path).is_err());
     }
 
     #[test]
