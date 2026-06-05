@@ -235,4 +235,12 @@ mod tests {
         let out = buffer_text(terminal.backend().buffer());
         assert!(out.contains("binary file"), "binary placeholder missing:\n{out}");
     }
+
+    #[test]
+    fn renders_confirm_quit_modal() {
+        let mut app = sample_app();
+        app.mode = Mode::ConfirmQuit;
+        let out = render(&app);
+        assert!(out.contains("quit"), "confirm-quit modal missing:\n{out}");
+    }
 }
