@@ -24,6 +24,7 @@ pub enum Row {
     },
 }
 
+#[derive(Debug)]
 pub struct App {
     pub files: Vec<FileDiff>,
     pub comments: Vec<Comment>,
