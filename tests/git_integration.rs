@@ -20,7 +20,12 @@ fn git(repo: &Path, args: &[&str]) {
 }
 
 fn working_spec() -> DiffSpec {
-    DiffSpec { scope: Scope::Working, target: None, base: None, merge_base: false }
+    DiffSpec {
+        scope: Scope::Working,
+        target: None,
+        base: None,
+        merge_base: false,
+    }
 }
 
 #[test]

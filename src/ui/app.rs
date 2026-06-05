@@ -89,7 +89,12 @@ impl App {
     fn target_at(&self, idx: usize) -> Option<(Side, u32)> {
         match self.rows().get(idx)? {
             Row::Header(_) => None,
-            Row::Diff { kind, old_no, new_no, .. } => match kind {
+            Row::Diff {
+                kind,
+                old_no,
+                new_no,
+                ..
+            } => match kind {
                 LineKind::Removed => old_no.map(|n| (Side::Old, n)),
                 _ => new_no.map(|n| (Side::New, n)),
             },
@@ -97,7 +102,9 @@ impl App {
     }
 
     fn current_file_path(&self) -> Option<String> {
-        self.files.get(self.file_cursor).map(|f| f.display_path().to_string())
+        self.files
+            .get(self.file_cursor)
+            .map(|f| f.display_path().to_string())
     }
 
     pub fn on_key(&mut self, key: KeyEvent) {
@@ -203,7 +210,11 @@ impl App {
         let line = if let Some(anchor) = self.range_anchor {
             // anchor〜cursor の対応行番号から範囲を作る
             let mut nums = Vec::new();
-            let (lo, hi) = if anchor <= self.line_cursor { (anchor, self.line_cursor) } else { (self.line_cursor, anchor) };
+            let (lo, hi) = if anchor <= self.line_cursor {
+                (anchor, self.line_cursor)
+            } else {
+                (self.line_cursor, anchor)
+            };
             for i in lo..=hi {
                 if let Some((s, n)) = self.target_at(i) {
                     if s == side {
@@ -227,8 +238,12 @@ impl App {
     }
 
     fn delete_comment_at_cursor(&mut self) {
-        let Some(path) = self.current_file_path() else { return };
-        let Some((side, line_no)) = self.target_at(self.line_cursor) else { return };
+        let Some(path) = self.current_file_path() else {
+            return;
+        };
+        let Some((side, line_no)) = self.target_at(self.line_cursor) else {
+            return;
+        };
         let before = self.comments.len();
         self.comments.retain(|c| {
             if c.file_path != path || c.position.side != side {
@@ -267,16 +282,36 @@ mod tests {
                 new_lines: 3,
                 header: "ctx".into(),
                 lines: vec![
-                    Line { kind: LineKind::Added, old_no: None, new_no: Some(2), content: "a".into() },
-                    Line { kind: LineKind::Added, old_no: None, new_no: Some(3), content: "b".into() },
-                    Line { kind: LineKind::Added, old_no: None, new_no: Some(4), content: "c".into() },
+                    Line {
+                        kind: LineKind::Added,
+                        old_no: None,
+                        new_no: Some(2),
+                        content: "a".into(),
+                    },
+                    Line {
+                        kind: LineKind::Added,
+                        old_no: None,
+                        new_no: Some(3),
+                        content: "b".into(),
+                    },
+                    Line {
+                        kind: LineKind::Added,
+                        old_no: None,
+                        new_no: Some(4),
+                        content: "c".into(),
+                    },
                 ],
             }],
         }
     }
 
     fn app() -> App {
-        App::new(vec![file("src/a.rs"), file("src/b.rs")], vec![], "/repo".into(), "working".into())
+        App::new(
+            vec![file("src/a.rs"), file("src/b.rs")],
+            vec![],
+            "/repo".into(),
+            "working".into(),
+        )
     }
 
     #[test]
@@ -343,7 +378,10 @@ mod tests {
             a.on_key(key(ch));
         }
         a.on_key(KeyEvent::from(KeyCode::Enter));
-        assert_eq!(a.comments[0].position.line, LineRange::Range { start: 2, end: 3 });
+        assert_eq!(
+            a.comments[0].position.line,
+            LineRange::Range { start: 2, end: 3 }
+        );
     }
 
     #[test]
@@ -410,16 +448,21 @@ mod tests {
                 new_start: 5,
                 new_lines: 0,
                 header: "h".into(),
-                lines: vec![
-                    Line { kind: LineKind::Removed, old_no: Some(5), new_no: None, content: "gone".into() },
-                ],
+                lines: vec![Line {
+                    kind: LineKind::Removed,
+                    old_no: Some(5),
+                    new_no: None,
+                    content: "gone".into(),
+                }],
             }],
         };
         let mut a = App::new(vec![removed_file], vec![], "/repo".into(), "working".into());
         a.on_key(key('j')); // row 0 = Header, row 1 = the Removed line
         a.on_key(key('c'));
         assert_eq!(a.mode, Mode::Comment);
-        for ch in "why".chars() { a.on_key(key(ch)); }
+        for ch in "why".chars() {
+            a.on_key(key(ch));
+        }
         a.on_key(KeyEvent::from(KeyCode::Enter));
         assert_eq!(a.comments.len(), 1);
         assert_eq!(a.comments[0].position.side, Side::Old);

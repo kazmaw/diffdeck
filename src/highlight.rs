@@ -33,11 +33,15 @@ impl Highlighter {
             return Vec::new();
         }
 
-        let syntax = extension
-            .and_then(|ext| self.syntax_set.find_syntax_by_extension(ext));
+        let syntax = extension.and_then(|ext| self.syntax_set.find_syntax_by_extension(ext));
         let syntax = match syntax {
             Some(s) => s,
-            None => return vec![HlSpan { rgb: (200, 200, 200), text: content.to_string() }],
+            None => {
+                return vec![HlSpan {
+                    rgb: (200, 200, 200),
+                    text: content.to_string(),
+                }]
+            }
         };
 
         let mut h = HighlightLines::new(syntax, &self.theme);
@@ -47,7 +51,12 @@ impl Highlighter {
         for piece in LinesWithEndings::from(&with_nl) {
             let ranges = match h.highlight_line(piece, &self.syntax_set) {
                 Ok(r) => r,
-                Err(_) => return vec![HlSpan { rgb: (200, 200, 200), text: content.to_string() }],
+                Err(_) => {
+                    return vec![HlSpan {
+                        rgb: (200, 200, 200),
+                        text: content.to_string(),
+                    }]
+                }
             };
             for (style, text) in ranges {
                 let text = text.trim_end_matches('\n');
@@ -61,7 +70,10 @@ impl Highlighter {
             }
         }
         if out.is_empty() {
-            out.push(HlSpan { rgb: (200, 200, 200), text: content.to_string() });
+            out.push(HlSpan {
+                rgb: (200, 200, 200),
+                text: content.to_string(),
+            });
         }
         out
     }

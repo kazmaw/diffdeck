@@ -34,7 +34,12 @@ pub struct Comment {
 
 impl Comment {
     /// difit 互換のスレッドコメントを作る。
-    pub fn thread(file_path: impl Into<String>, side: Side, line: LineRange, body: impl Into<String>) -> Self {
+    pub fn thread(
+        file_path: impl Into<String>,
+        side: Side,
+        line: LineRange,
+        body: impl Into<String>,
+    ) -> Self {
         Comment {
             comment_type: "thread".into(),
             file_path: file_path.into(),
@@ -58,7 +63,12 @@ mod tests {
 
     #[test]
     fn single_line_serializes_like_difit() {
-        let c = Comment::thread("src/auth.ts", Side::New, LineRange::Single(16), "warn 要らない？");
+        let c = Comment::thread(
+            "src/auth.ts",
+            Side::New,
+            LineRange::Single(16),
+            "warn 要らない？",
+        );
         let v: serde_json::Value = serde_json::to_value(&c).unwrap();
         assert_eq!(v["type"], "thread");
         assert_eq!(v["filePath"], "src/auth.ts");
@@ -88,7 +98,12 @@ mod tests {
             scope: "working".into(),
             comments: vec![
                 Comment::thread("src/auth.ts", Side::New, LineRange::Single(16), "a"),
-                Comment::thread("src/ui.tsx", Side::Old, LineRange::Range { start: 1, end: 4 }, "b"),
+                Comment::thread(
+                    "src/ui.tsx",
+                    Side::Old,
+                    LineRange::Range { start: 1, end: 4 },
+                    "b",
+                ),
             ],
         };
         let json = serde_json::to_string(&original).unwrap();

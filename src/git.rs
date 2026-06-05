@@ -91,25 +91,52 @@ mod tests {
     #[test]
     fn staged_args() {
         let a = git_diff_args(&spec(Scope::Staged, None, None, false));
-        assert_eq!(a, vec!["diff", "--no-color", "--no-ext-diff", "-M", "--staged"]);
+        assert_eq!(
+            a,
+            vec!["diff", "--no-color", "--no-ext-diff", "-M", "--staged"]
+        );
     }
 
     #[test]
     fn ref_args() {
         let a = git_diff_args(&spec(Scope::Ref, Some("abc"), None, false));
-        assert_eq!(a, vec!["diff", "--no-color", "--no-ext-diff", "-M", "abc^", "abc"]);
+        assert_eq!(
+            a,
+            vec!["diff", "--no-color", "--no-ext-diff", "-M", "abc^", "abc"]
+        );
     }
 
     #[test]
     fn range_args() {
         let a = git_diff_args(&spec(Scope::Range, Some("feature"), Some("main"), false));
-        assert_eq!(a, vec!["diff", "--no-color", "--no-ext-diff", "-M", "main", "feature"]);
+        assert_eq!(
+            a,
+            vec![
+                "diff",
+                "--no-color",
+                "--no-ext-diff",
+                "-M",
+                "main",
+                "feature"
+            ]
+        );
     }
 
     #[test]
     fn merge_base_args() {
         let a = git_diff_args(&spec(Scope::Range, Some("feature"), Some("main"), true));
-        assert_eq!(a, vec!["diff", "--no-color", "--no-ext-diff", "-M", "--merge-base", "main", "feature"]);
+        assert_eq!(
+            a,
+            vec![
+                "diff",
+                "--no-color",
+                "--no-ext-diff",
+                "-M",
+                "--merge-base",
+                "main",
+                "feature"
+            ]
+        );
     }
 
     #[test]

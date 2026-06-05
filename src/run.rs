@@ -18,9 +18,16 @@ pub fn build_app(spec: &DiffSpec, repo: &Path) -> Result<Option<App>> {
         return Ok(None);
     }
     let path = comments::comments_path(repo);
-    let existing = comments::load(&path)?.map(|f| f.comments).unwrap_or_default();
+    let existing = comments::load(&path)?
+        .map(|f| f.comments)
+        .unwrap_or_default();
     let repo_str = repo.display().to_string();
-    Ok(Some(App::new(files, existing, repo_str, spec.scope.as_str().to_string())))
+    Ok(Some(App::new(
+        files,
+        existing,
+        repo_str,
+        spec.scope.as_str().to_string(),
+    )))
 }
 
 /// 終了時にコメントを保存する。
@@ -71,7 +78,12 @@ mod tests {
     }
 
     fn working() -> DiffSpec {
-        DiffSpec { scope: Scope::Working, target: None, base: None, merge_base: false }
+        DiffSpec {
+            scope: Scope::Working,
+            target: None,
+            base: None,
+            merge_base: false,
+        }
     }
 
     #[test]
@@ -107,11 +119,18 @@ mod tests {
 
         // コメントを1件追加して保存をリクエスト
         use crate::comment::{Comment, LineRange, Side};
-        app.comments.push(Comment::thread("a.txt", Side::New, LineRange::Single(2), "hi"));
+        app.comments.push(Comment::thread(
+            "a.txt",
+            Side::New,
+            LineRange::Single(2),
+            "hi",
+        ));
         app.save_requested = true;
         persist(&app, p).unwrap();
 
-        let saved = comments::load(&comments::comments_path(p)).unwrap().unwrap();
+        let saved = comments::load(&comments::comments_path(p))
+            .unwrap()
+            .unwrap();
         assert_eq!(saved.comments.len(), 1);
         assert_eq!(saved.scope, "working");
     }

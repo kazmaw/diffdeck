@@ -60,12 +60,20 @@ fn draw_file_list(frame: &mut Frame, app: &App, area: Rect) {
 }
 
 fn draw_diff(frame: &mut Frame, app: &App, hl: &Highlighter, area: Rect) {
-    let ext = app.files.get(app.file_cursor).and_then(|f| f.extension().map(String::from));
+    let ext = app
+        .files
+        .get(app.file_cursor)
+        .and_then(|f| f.extension().map(String::from));
     let rows = app.rows();
     let mut lines: Vec<TextLine> = Vec::new();
 
     if rows.is_empty() {
-        if app.files.get(app.file_cursor).map(|f| f.is_binary).unwrap_or(false) {
+        if app
+            .files
+            .get(app.file_cursor)
+            .map(|f| f.is_binary)
+            .unwrap_or(false)
+        {
             lines.push(TextLine::from("binary file"));
         }
     } else {
@@ -73,7 +81,10 @@ fn draw_diff(frame: &mut Frame, app: &App, hl: &Highlighter, area: Rect) {
             let selected = i == app.line_cursor;
             match row {
                 Row::Header(text) => {
-                    lines.push(TextLine::styled(text.clone(), Style::default().fg(Color::Cyan)));
+                    lines.push(TextLine::styled(
+                        text.clone(),
+                        Style::default().fg(Color::Cyan),
+                    ));
                 }
                 Row::Diff { kind, content, .. } => {
                     let (sign, base) = match kind {
@@ -120,9 +131,16 @@ fn draw_modal(frame: &mut Frame, title: &str, body: &str, area: Rect) {
     let h = 3;
     let x = area.x + (area.width.saturating_sub(w)) / 2;
     let y = area.y + (area.height.saturating_sub(h)) / 2;
-    let modal = Rect { x, y, width: w, height: h };
+    let modal = Rect {
+        x,
+        y,
+        width: w,
+        height: h,
+    };
     frame.render_widget(Clear, modal);
-    let block = Block::default().borders(Borders::ALL).title(title.to_string());
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .title(title.to_string());
     frame.render_widget(Paragraph::new(body.to_string()).block(block), modal);
 }
 
@@ -176,7 +194,12 @@ mod tests {
         };
         App::new(
             vec![f],
-            vec![Comment::thread("src/a.rs", Side::New, LineRange::Single(2), "hi")],
+            vec![Comment::thread(
+                "src/a.rs",
+                Side::New,
+                LineRange::Single(2),
+                "hi",
+            )],
             "/repo".into(),
             "working".into(),
         )
@@ -233,7 +256,10 @@ mod tests {
         let mut terminal = Terminal::new(backend).unwrap();
         terminal.draw(|f| draw(f, &app, &hl)).unwrap();
         let out = buffer_text(terminal.backend().buffer());
-        assert!(out.contains("binary file"), "binary placeholder missing:\n{out}");
+        assert!(
+            out.contains("binary file"),
+            "binary placeholder missing:\n{out}"
+        );
     }
 
     #[test]

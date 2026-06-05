@@ -18,7 +18,8 @@ pub fn load(path: &Path) -> Result<Option<CommentFile>> {
         return Ok(None);
     }
     let text = std::fs::read_to_string(path).with_context(|| format!("read {}", path.display()))?;
-    let parsed: CommentFile = serde_json::from_str(&text).with_context(|| format!("parse {}", path.display()))?;
+    let parsed: CommentFile =
+        serde_json::from_str(&text).with_context(|| format!("parse {}", path.display()))?;
     Ok(Some(parsed))
 }
 
@@ -38,7 +39,8 @@ pub fn save(path: &Path, file: &CommentFile) -> Result<()> {
         std::fs::create_dir_all(parent).with_context(|| format!("mkdir {}", parent.display()))?;
     }
     let json = serde_json::to_string_pretty(file)?;
-    std::fs::write(path, format!("{json}\n")).with_context(|| format!("write {}", path.display()))?;
+    std::fs::write(path, format!("{json}\n"))
+        .with_context(|| format!("write {}", path.display()))?;
     Ok(())
 }
 
@@ -71,7 +73,12 @@ mod tests {
         let file = build(
             "/tmp/repo",
             "working",
-            vec![Comment::thread("a.rs", Side::New, LineRange::Single(3), "hi")],
+            vec![Comment::thread(
+                "a.rs",
+                Side::New,
+                LineRange::Single(3),
+                "hi",
+            )],
         );
         save(&path, &file).unwrap();
         assert!(path.exists());

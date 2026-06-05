@@ -59,13 +59,28 @@ pub fn parse_diff(text: &str) -> Vec<FileDiff> {
             // ハンク前のメタ行（index など）は無視
             if let Some(hunk) = f.hunks.last_mut() {
                 if let Some(content) = line.strip_prefix('+') {
-                    hunk.lines.push(Line { kind: LineKind::Added, old_no: None, new_no: Some(new_no), content: content.to_string() });
+                    hunk.lines.push(Line {
+                        kind: LineKind::Added,
+                        old_no: None,
+                        new_no: Some(new_no),
+                        content: content.to_string(),
+                    });
                     new_no += 1;
                 } else if let Some(content) = line.strip_prefix('-') {
-                    hunk.lines.push(Line { kind: LineKind::Removed, old_no: Some(old_no), new_no: None, content: content.to_string() });
+                    hunk.lines.push(Line {
+                        kind: LineKind::Removed,
+                        old_no: Some(old_no),
+                        new_no: None,
+                        content: content.to_string(),
+                    });
                     old_no += 1;
                 } else if let Some(content) = line.strip_prefix(' ') {
-                    hunk.lines.push(Line { kind: LineKind::Context, old_no: Some(old_no), new_no: Some(new_no), content: content.to_string() });
+                    hunk.lines.push(Line {
+                        kind: LineKind::Context,
+                        old_no: Some(old_no),
+                        new_no: Some(new_no),
+                        content: content.to_string(),
+                    });
                     old_no += 1;
                     new_no += 1;
                 } else if line.starts_with('\\') {
@@ -96,7 +111,10 @@ fn strip_diff_path(s: &str) -> Option<String> {
     if s == "/dev/null" {
         return None;
     }
-    let s = s.strip_prefix("a/").or_else(|| s.strip_prefix("b/")).unwrap_or(s);
+    let s = s
+        .strip_prefix("a/")
+        .or_else(|| s.strip_prefix("b/"))
+        .unwrap_or(s);
     Some(s.to_string())
 }
 
@@ -148,14 +166,40 @@ index 1111111..2222222 100644
         assert_eq!(f.hunks.len(), 1);
 
         let h = &f.hunks[0];
-        assert_eq!((h.old_start, h.old_lines, h.new_start, h.new_lines), (10, 3, 10, 4));
+        assert_eq!(
+            (h.old_start, h.old_lines, h.new_start, h.new_lines),
+            (10, 3, 10, 4)
+        );
         assert_eq!(h.header, "fn login() {");
-        assert_eq!(h.lines, vec![
-            Line { kind: LineKind::Context, old_no: Some(10), new_no: Some(10), content: "ctx line".into() },
-            Line { kind: LineKind::Removed, old_no: Some(11), new_no: None, content: "removed line".into() },
-            Line { kind: LineKind::Added, old_no: None, new_no: Some(11), content: "added one".into() },
-            Line { kind: LineKind::Added, old_no: None, new_no: Some(12), content: "added two".into() },
-        ]);
+        assert_eq!(
+            h.lines,
+            vec![
+                Line {
+                    kind: LineKind::Context,
+                    old_no: Some(10),
+                    new_no: Some(10),
+                    content: "ctx line".into()
+                },
+                Line {
+                    kind: LineKind::Removed,
+                    old_no: Some(11),
+                    new_no: None,
+                    content: "removed line".into()
+                },
+                Line {
+                    kind: LineKind::Added,
+                    old_no: None,
+                    new_no: Some(11),
+                    content: "added one".into()
+                },
+                Line {
+                    kind: LineKind::Added,
+                    old_no: None,
+                    new_no: Some(12),
+                    content: "added two".into()
+                },
+            ]
+        );
     }
 
     #[test]
@@ -273,7 +317,10 @@ index 1..2 100644
 ";
         let files = parse_diff(input);
         let h = &files[0].hunks[0];
-        assert_eq!((h.old_start, h.old_lines, h.new_start, h.new_lines), (5, 1, 5, 1));
+        assert_eq!(
+            (h.old_start, h.old_lines, h.new_start, h.new_lines),
+            (5, 1, 5, 1)
+        );
     }
 
     #[test]

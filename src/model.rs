@@ -61,7 +61,9 @@ impl FileDiff {
     /// 表示パスの拡張子（"rs" など）。なければ None。
     pub fn extension(&self) -> Option<&str> {
         let path = self.display_path();
-        std::path::Path::new(path).extension().and_then(|e| e.to_str())
+        std::path::Path::new(path)
+            .extension()
+            .and_then(|e| e.to_str())
     }
 }
 
@@ -109,10 +111,30 @@ mod tests {
                 new_lines: 3,
                 header: "fn login".into(),
                 lines: vec![
-                    Line { kind: LineKind::Context, old_no: Some(10), new_no: Some(10), content: "ctx".into() },
-                    Line { kind: LineKind::Removed, old_no: Some(11), new_no: None, content: "old".into() },
-                    Line { kind: LineKind::Added, old_no: None, new_no: Some(11), content: "new1".into() },
-                    Line { kind: LineKind::Added, old_no: None, new_no: Some(12), content: "new2".into() },
+                    Line {
+                        kind: LineKind::Context,
+                        old_no: Some(10),
+                        new_no: Some(10),
+                        content: "ctx".into(),
+                    },
+                    Line {
+                        kind: LineKind::Removed,
+                        old_no: Some(11),
+                        new_no: None,
+                        content: "old".into(),
+                    },
+                    Line {
+                        kind: LineKind::Added,
+                        old_no: None,
+                        new_no: Some(11),
+                        content: "new1".into(),
+                    },
+                    Line {
+                        kind: LineKind::Added,
+                        old_no: None,
+                        new_no: Some(12),
+                        content: "new2".into(),
+                    },
                 ],
             }],
         }
@@ -125,13 +147,20 @@ mod tests {
 
     #[test]
     fn display_path_uses_old_when_deleted() {
-        let f = FileDiff { new_path: None, ..sample_file() };
+        let f = FileDiff {
+            new_path: None,
+            ..sample_file()
+        };
         assert_eq!(f.display_path(), "src/auth.rs");
     }
 
     #[test]
     fn display_path_unknown_when_both_none() {
-        let f = FileDiff { old_path: None, new_path: None, ..sample_file() };
+        let f = FileDiff {
+            old_path: None,
+            new_path: None,
+            ..sample_file()
+        };
         assert_eq!(f.display_path(), "(unknown)");
     }
 

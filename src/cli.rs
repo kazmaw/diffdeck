@@ -4,7 +4,10 @@ use crate::model::{DiffSpec, Scope};
 use clap::Parser;
 
 #[derive(Parser, Debug)]
-#[command(name = "diffdeck", about = "Fast in-terminal diff viewer for Claude Code")]
+#[command(
+    name = "diffdeck",
+    about = "Fast in-terminal diff viewer for Claude Code"
+)]
 pub struct Cli {
     /// "staged" / ref / target のいずれか（省略時は作業ツリー）
     pub arg1: Option<String>,
@@ -58,26 +61,66 @@ mod tests {
 
     #[test]
     fn no_args_is_working_tree() {
-        assert_eq!(parse(&[]), DiffSpec { scope: Scope::Working, target: None, base: None, merge_base: false });
+        assert_eq!(
+            parse(&[]),
+            DiffSpec {
+                scope: Scope::Working,
+                target: None,
+                base: None,
+                merge_base: false
+            }
+        );
     }
 
     #[test]
     fn staged_keyword() {
-        assert_eq!(parse(&["staged"]), DiffSpec { scope: Scope::Staged, target: None, base: None, merge_base: false });
+        assert_eq!(
+            parse(&["staged"]),
+            DiffSpec {
+                scope: Scope::Staged,
+                target: None,
+                base: None,
+                merge_base: false
+            }
+        );
     }
 
     #[test]
     fn single_ref() {
-        assert_eq!(parse(&["abc123"]), DiffSpec { scope: Scope::Ref, target: Some("abc123".into()), base: None, merge_base: false });
+        assert_eq!(
+            parse(&["abc123"]),
+            DiffSpec {
+                scope: Scope::Ref,
+                target: Some("abc123".into()),
+                base: None,
+                merge_base: false
+            }
+        );
     }
 
     #[test]
     fn two_point_range() {
-        assert_eq!(parse(&["feature", "main"]), DiffSpec { scope: Scope::Range, target: Some("feature".into()), base: Some("main".into()), merge_base: false });
+        assert_eq!(
+            parse(&["feature", "main"]),
+            DiffSpec {
+                scope: Scope::Range,
+                target: Some("feature".into()),
+                base: Some("main".into()),
+                merge_base: false
+            }
+        );
     }
 
     #[test]
     fn merge_base_flag() {
-        assert_eq!(parse(&["feature", "main", "--merge-base"]), DiffSpec { scope: Scope::Range, target: Some("feature".into()), base: Some("main".into()), merge_base: true });
+        assert_eq!(
+            parse(&["feature", "main", "--merge-base"]),
+            DiffSpec {
+                scope: Scope::Range,
+                target: Some("feature".into()),
+                base: Some("main".into()),
+                merge_base: true
+            }
+        );
     }
 }
