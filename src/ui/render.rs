@@ -320,10 +320,11 @@ mod tests {
         app
     }
 
-    /// Render using a small terminal (100×10 → inner_h ≈ 8).
+    /// Render using a small terminal (120×10). The right column splits into
+    /// [Min(1), Length(1)], so the diff pane is height 9 → inner_h = 9-2 = 7.
     fn render_small(app: &App) -> String {
         let hl = Highlighter::new();
-        // Width 120 avoids wrapping of unique tokens; height 10 → inner_h = 8.
+        // Width 120 avoids wrapping of unique tokens; height 10 → inner_h = 7.
         let backend = TestBackend::new(120, 10);
         let mut terminal = Terminal::new(backend).unwrap();
         terminal.draw(|f| draw(f, app, &hl)).unwrap();
@@ -334,7 +335,7 @@ mod tests {
     #[test]
     fn cursor_at_top_shows_first_lines() {
         // rows: index 0 = Header, index 1..=60 = lines ZZZ0ZZZ..ZZZ59ZZZ
-        // inner_h = 8; offset = 0 (cursor=0 < 8); visible rows 0..8.
+        // inner_h = 7; offset = 0 (cursor=0 < 7); visible rows 0..7.
         // Row 0 is the Header, row 1 is ZZZ0ZZZ. Row 50 (ZZZ49ZZZ) is outside.
         let app = tall_app(0);
         let out = render_small(&app);
@@ -352,10 +353,10 @@ mod tests {
     #[test]
     fn cursor_near_bottom_scrolls_into_view() {
         // line_cursor = 55 → global row 55 = ZZZ54ZZZ (row 0 is Header).
-        // total = 61; inner_h = 8.
-        // offset = min(55+1-8, 61-8) = min(48, 53) = 48.
-        // visible rows 48..56 → global indices 48..56 → ZZZ47ZZZ..ZZZ55ZZZ visible.
-        // ZZZ0ZZZ (global row 1) is well below offset=48, so not visible.
+        // total = 61; inner_h = 7.
+        // offset = min(55+1-7, 61-7) = min(49, 54) = 49.
+        // visible rows 49..56 → global indices 49..56 → ZZZ48ZZZ..ZZZ55ZZZ visible.
+        // ZZZ0ZZZ (global row 1) is well below offset=49, so not visible.
         let app = tall_app(55);
         let out = render_small(&app);
         assert!(
