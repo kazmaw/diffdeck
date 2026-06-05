@@ -56,22 +56,21 @@ pub fn parse_diff(text: &str) -> Vec<FileDiff> {
                 });
             }
         } else if let Some(f) = cur.as_mut() {
-            if f.hunks.is_empty() {
-                continue; // ハンク前のメタ行（index など）は無視
-            }
-            let hunk = f.hunks.last_mut().unwrap();
-            if let Some(content) = line.strip_prefix('+') {
-                hunk.lines.push(Line { kind: LineKind::Added, old_no: None, new_no: Some(new_no), content: content.to_string() });
-                new_no += 1;
-            } else if let Some(content) = line.strip_prefix('-') {
-                hunk.lines.push(Line { kind: LineKind::Removed, old_no: Some(old_no), new_no: None, content: content.to_string() });
-                old_no += 1;
-            } else if let Some(content) = line.strip_prefix(' ') {
-                hunk.lines.push(Line { kind: LineKind::Context, old_no: Some(old_no), new_no: Some(new_no), content: content.to_string() });
-                old_no += 1;
-                new_no += 1;
-            } else if line.starts_with('\\') {
-                // "\ No newline at end of file" は無視
+            // ハンク前のメタ行（index など）は無視
+            if let Some(hunk) = f.hunks.last_mut() {
+                if let Some(content) = line.strip_prefix('+') {
+                    hunk.lines.push(Line { kind: LineKind::Added, old_no: None, new_no: Some(new_no), content: content.to_string() });
+                    new_no += 1;
+                } else if let Some(content) = line.strip_prefix('-') {
+                    hunk.lines.push(Line { kind: LineKind::Removed, old_no: Some(old_no), new_no: None, content: content.to_string() });
+                    old_no += 1;
+                } else if let Some(content) = line.strip_prefix(' ') {
+                    hunk.lines.push(Line { kind: LineKind::Context, old_no: Some(old_no), new_no: Some(new_no), content: content.to_string() });
+                    old_no += 1;
+                    new_no += 1;
+                } else if line.starts_with('\\') {
+                    // "\ No newline at end of file" は無視
+                }
             }
         }
     }
@@ -150,6 +149,7 @@ index 1111111..2222222 100644
 
         let h = &f.hunks[0];
         assert_eq!((h.old_start, h.old_lines, h.new_start, h.new_lines), (10, 3, 10, 4));
+        assert_eq!(h.header, "fn login() {");
         assert_eq!(h.lines, vec![
             Line { kind: LineKind::Context, old_no: Some(10), new_no: Some(10), content: "ctx line".into() },
             Line { kind: LineKind::Removed, old_no: Some(11), new_no: None, content: "removed line".into() },
@@ -274,5 +274,10 @@ index 1..2 100644
         let files = parse_diff(input);
         let h = &files[0].hunks[0];
         assert_eq!((h.old_start, h.old_lines, h.new_start, h.new_lines), (5, 1, 5, 1));
+    }
+
+    #[test]
+    fn empty_input_yields_no_files() {
+        assert_eq!(parse_diff(""), Vec::new());
     }
 }
