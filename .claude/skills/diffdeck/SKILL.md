@@ -10,8 +10,10 @@ Diffdeck（TUI 差分ビューア）がローカルレビューで残した行�
 ## 前提
 
 - カレント repo 直下に `.diffdeck/comments.json` が存在する。
-- スキーマは `diffdeck/v1`。`comments[]` の各要素は `type` / `filePath` / `position` / `body`。
+- JSON のトップレベルには `schema` / `repo` / `scope` / `comments[]` がある。
+- `schema` は `diffdeck/v1`。`comments[]` の各要素は `type` / `filePath` / `position` / `body`。
 - `position.side` は `"old"` / `"new"`、`position.line` は数値 or `{start, end}`。
+- `scope` はコメントを書いた際の diff 範囲（例: `working` / `staged` / `ref` / `range`）を記録した情報フィールドで、このスキルはフィルタ処理には使わないが、報告時に言及する。
 
 ## 手順
 
@@ -21,11 +23,14 @@ Diffdeck（TUI 差分ビューア）がローカルレビューで残した行�
    - `side`（new=変更後 / old=変更前）
    - 該当行の現在のコード（`filePath` の該当行を読んで文脈を添える）
    - コメント本文 `body`
+   - **`side: "new"` の場合**: `line` は変更後ファイル（現在の working tree）の行番号なので、`filePath` のその行をそのまま読めばよい。
+   - **`side: "old"` の場合**: `line` は変更前の行番号で、現在の working tree の同じ行番号とは一致しないことがある（その行は削除・移動済みかもしれない）。`git diff` などで変更前の文脈を確認するか、対応箇所が曖昧なときはユーザーに確認する。即断で誤った行を編集しない。
 3. **反映**: コメントの指摘に従ってコードを修正する。指摘が質問・確認の場合は、修正せずユーザーに確認する。
 4. **退避**: 全件処理したら、`.diffdeck/processed/` ディレクトリを作り、`comments.json` を `.diffdeck/processed/<timestamp>.json` へ移動する。`<timestamp>` は `date +%Y%m%d-%H%M%S` で生成する。二重適用を防ぐため、退避後は `comments.json` を残さない。
 5. **報告**: 反映したファイルと変更概要、退避先パスを要約して報告する。
 
 ## 注意
 
-- `repo` メタが現在の repo と一致するか確認する。異なる場合はユーザーに警告する。
+- **repo 確認**: `git rev-parse --show-toplevel` で得られる絶対パスと JSON の `repo` フィールドを比較する。異なる場合はユーザーに警告してから続行するか中止を確認する。
+- **スキーマ検証**: `comments.json` が壊れている、または `schema` が `diffdeck/v1` でない場合は、無理に処理せずユーザーに報告して指示を仰ぐ。
 - コメントは「指摘」であって「指示」とは限らない。dead code 疑い・確認質問などは即修正せず判断を仰ぐ。
