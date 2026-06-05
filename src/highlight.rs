@@ -92,7 +92,7 @@ mod tests {
         let spans = h.highlight_line(content, Some("rs"));
         let joined: String = spans.iter().map(|s| s.text.as_str()).collect();
         assert_eq!(joined, content);
-        assert!(spans.len() >= 1);
+        assert!(!spans.is_empty());
     }
 
     #[test]
