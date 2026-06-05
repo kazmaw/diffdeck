@@ -67,7 +67,11 @@ fn draw_diff(frame: &mut Frame, app: &App, hl: &Highlighter, area: Rect) {
     let rows = app.rows();
     let mut lines: Vec<TextLine> = Vec::new();
 
+    // Guard against tiny terminals: bordered block consumes 2 rows.
+    let inner_h = (area.height.saturating_sub(2)) as usize;
+
     if rows.is_empty() {
+        // Binary placeholder — independent of slicing logic.
         if app
             .files
             .get(app.file_cursor)
@@ -76,9 +80,23 @@ fn draw_diff(frame: &mut Frame, app: &App, hl: &Highlighter, area: Rect) {
         {
             lines.push(TextLine::from("binary file"));
         }
-    } else {
-        for (i, row) in rows.iter().enumerate() {
-            let selected = i == app.line_cursor;
+    } else if inner_h > 0 {
+        let total = rows.len();
+
+        // Compute scroll offset: keep line_cursor within [offset, offset+inner_h).
+        let offset = if app.line_cursor < inner_h {
+            0
+        } else {
+            (app.line_cursor + 1)
+                .saturating_sub(inner_h)
+                .min(total.saturating_sub(inner_h))
+        };
+
+        // Render only the visible slice; use global index for "selected" check.
+        let visible_end = (offset + inner_h).min(total);
+        for (local_i, row) in rows[offset..visible_end].iter().enumerate() {
+            let global_i = offset + local_i;
+            let selected = global_i == app.line_cursor;
             match row {
                 Row::Header(text) => {
                     lines.push(TextLine::styled(
@@ -108,6 +126,7 @@ fn draw_diff(frame: &mut Frame, app: &App, hl: &Highlighter, area: Rect) {
             }
         }
     }
+    // inner_h == 0: lines stays empty → renders blank paragraph safely.
 
     let block = Block::default().borders(Borders::ALL).title("diff");
     frame.render_widget(Paragraph::new(lines).block(block), area);
@@ -268,5 +287,84 @@ mod tests {
         app.mode = Mode::ConfirmQuit;
         let out = render(&app);
         assert!(out.contains("quit"), "confirm-quit modal missing:\n{out}");
+    }
+
+    /// Build an App with a single file containing 60 added lines.
+    /// Each line has unique content `"ZZZiZZZ"` so `contains` checks are unambiguous.
+    /// Uses a `.txt` extension so syntect does not reflow content.
+    fn tall_app(line_cursor: usize) -> App {
+        use crate::model::{FileDiff, Hunk, Line, LineKind};
+        let lines: Vec<Line> = (0..60)
+            .map(|i| Line {
+                kind: LineKind::Added,
+                old_no: None,
+                new_no: Some(i as u32 + 1),
+                content: format!("ZZZ{i}ZZZ"),
+            })
+            .collect();
+        let f = FileDiff {
+            old_path: Some("file.txt".into()),
+            new_path: Some("file.txt".into()),
+            is_binary: false,
+            hunks: vec![Hunk {
+                old_start: 1,
+                old_lines: 0,
+                new_start: 1,
+                new_lines: 60,
+                header: "tall".into(),
+                lines,
+            }],
+        };
+        let mut app = App::new(vec![f], vec![], "/repo".into(), "working".into());
+        app.line_cursor = line_cursor;
+        app
+    }
+
+    /// Render using a small terminal (100×10 → inner_h ≈ 8).
+    fn render_small(app: &App) -> String {
+        let hl = Highlighter::new();
+        // Width 120 avoids wrapping of unique tokens; height 10 → inner_h = 8.
+        let backend = TestBackend::new(120, 10);
+        let mut terminal = Terminal::new(backend).unwrap();
+        terminal.draw(|f| draw(f, app, &hl)).unwrap();
+        buffer_text(terminal.backend().buffer())
+    }
+
+    /// With cursor at the top, the viewport should show early lines and hide far-down lines.
+    #[test]
+    fn cursor_at_top_shows_first_lines() {
+        // rows: index 0 = Header, index 1..=60 = lines ZZZ0ZZZ..ZZZ59ZZZ
+        // inner_h = 8; offset = 0 (cursor=0 < 8); visible rows 0..8.
+        // Row 0 is the Header, row 1 is ZZZ0ZZZ. Row 50 (ZZZ49ZZZ) is outside.
+        let app = tall_app(0);
+        let out = render_small(&app);
+        assert!(
+            out.contains("ZZZ0ZZZ"),
+            "first line should be visible at top:\n{out}"
+        );
+        assert!(
+            !out.contains("ZZZ49ZZZ"),
+            "line 50 should not be visible when cursor is at top:\n{out}"
+        );
+    }
+
+    /// With cursor near the bottom, the viewport should scroll so the cursor line is visible.
+    #[test]
+    fn cursor_near_bottom_scrolls_into_view() {
+        // line_cursor = 55 → global row 55 = ZZZ54ZZZ (row 0 is Header).
+        // total = 61; inner_h = 8.
+        // offset = min(55+1-8, 61-8) = min(48, 53) = 48.
+        // visible rows 48..56 → global indices 48..56 → ZZZ47ZZZ..ZZZ55ZZZ visible.
+        // ZZZ0ZZZ (global row 1) is well below offset=48, so not visible.
+        let app = tall_app(55);
+        let out = render_small(&app);
+        assert!(
+            out.contains("ZZZ54ZZZ"),
+            "cursor line should be visible after scrolling:\n{out}"
+        );
+        assert!(
+            !out.contains("ZZZ0ZZZ"),
+            "first line should not be visible when scrolled near bottom:\n{out}"
+        );
     }
 }
