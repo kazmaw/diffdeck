@@ -396,4 +396,41 @@ mod tests {
         a.on_key(key('y'));
         assert!(a.should_quit);
     }
+
+    #[test]
+    fn comment_on_removed_line_uses_old_side() {
+        let removed_file = FileDiff {
+            old_path: Some("src/x.rs".into()),
+            new_path: Some("src/x.rs".into()),
+            is_binary: false,
+            hunks: vec![Hunk {
+                old_start: 5,
+                old_lines: 1,
+                new_start: 5,
+                new_lines: 0,
+                header: "h".into(),
+                lines: vec![
+                    Line { kind: LineKind::Removed, old_no: Some(5), new_no: None, content: "gone".into() },
+                ],
+            }],
+        };
+        let mut a = App::new(vec![removed_file], vec![], "/repo".into(), "working".into());
+        a.on_key(key('j')); // row 0 = Header, row 1 = the Removed line
+        a.on_key(key('c'));
+        assert_eq!(a.mode, Mode::Comment);
+        for ch in "why".chars() { a.on_key(key(ch)); }
+        a.on_key(KeyEvent::from(KeyCode::Enter));
+        assert_eq!(a.comments.len(), 1);
+        assert_eq!(a.comments[0].position.side, Side::Old);
+        assert_eq!(a.comments[0].position.line, LineRange::Single(5));
+    }
+
+    #[test]
+    fn c_on_header_row_is_noop() {
+        let mut a = app();
+        // line_cursor starts at 0 = Header row
+        a.on_key(key('c'));
+        assert_eq!(a.mode, Mode::Normal);
+        assert!(a.comments.is_empty());
+    }
 }
