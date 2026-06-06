@@ -4,7 +4,8 @@ use crossterm::execute;
 use crossterm::terminal::{
     disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
 };
-use diffdeck::cli::Cli;
+use diffdeck::cli::{Cli, Command, InstallSkillArgs};
+use diffdeck::skill_install::{self, InstallOptions};
 use diffdeck::highlight::Highlighter;
 use diffdeck::run::{build_app, gitignore_warning, persist};
 use diffdeck::ui::app::App;
@@ -17,6 +18,11 @@ use std::process::ExitCode;
 
 fn main() -> ExitCode {
     let cli = Cli::parse();
+
+    if let Some(Command::InstallSkill(args)) = &cli.command {
+        return run_install_skill_cmd(args);
+    }
+
     let spec = cli.to_spec();
     let repo = Path::new(".");
 
@@ -41,6 +47,30 @@ fn main() -> ExitCode {
         Err(e) => {
             eprintln!("error: {e}");
             ExitCode::from(1)
+        }
+    }
+}
+
+fn run_install_skill_cmd(args: &InstallSkillArgs) -> ExitCode {
+    let opts = InstallOptions {
+        target: args.target.clone(),
+        dir: args.dir.clone(),
+        print: args.print,
+        force: args.force,
+    };
+    let home = match skill_install::home_dir() {
+        Ok(h) => h,
+        Err(e) => {
+            eprintln!("error: {e}");
+            return ExitCode::from(2);
+        }
+    };
+    let mut out = std::io::stdout();
+    match skill_install::run_install_skill(&opts, &home, &mut out) {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(e) => {
+            eprintln!("error: {e}");
+            ExitCode::from(2)
         }
     }
 }
