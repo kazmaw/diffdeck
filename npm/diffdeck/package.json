@@ -1,0 +1,34 @@
+{
+  "name": "diffdeck",
+  "version": "0.0.0",
+  "description": "Fast in-terminal diff viewer that emits difit-compatible line comments for Claude Code",
+  "bin": {
+    "diffdeck": "bin/diffdeck.js"
+  },
+  "files": [
+    "bin/",
+    "lib/"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kazmaw/diffdeck.git"
+  },
+  "homepage": "https://github.com/kazmaw/diffdeck",
+  "keywords": [
+    "diff",
+    "tui",
+    "git",
+    "review",
+    "claude"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "optionalDependencies": {
+    "@diffdeck/cli-darwin-arm64": "0.0.0",
+    "@diffdeck/cli-darwin-x64": "0.0.0",
+    "@diffdeck/cli-linux-x64": "0.0.0",
+    "@diffdeck/cli-win32-x64": "0.0.0"
+  }
+}
