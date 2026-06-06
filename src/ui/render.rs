@@ -8,6 +8,12 @@ use ratatui::text::{Line as TextLine, Span};
 use ratatui::widgets::{Block, Borders, Clear, Paragraph};
 use ratatui::Frame;
 
+/// 端末高から差分ペインの表示行数を求める。ステータス1行 + ボーダー2行を除く。
+/// main ループがページ移動量の算出のため毎フレーム App に書き戻す。
+pub fn viewport_height(term_height: u16) -> usize {
+    (term_height as usize).saturating_sub(3).max(1)
+}
+
 pub fn draw(frame: &mut Frame, app: &App, hl: &Highlighter) {
     let area = frame.area();
     let cols = Layout::default()
@@ -123,6 +129,17 @@ fn draw_diff(frame: &mut Frame, app: &App, hl: &Highlighter, area: Rect) {
                     }
                     lines.push(line);
                 }
+                Row::Comment { body } => {
+                    // 絵文字を使わず、色付きの縦バーで区別する。
+                    let mut line = TextLine::styled(
+                        format!("    ▌ {body}"),
+                        Style::default().fg(Color::Yellow),
+                    );
+                    if selected {
+                        line = line.style(Style::default().add_modifier(Modifier::REVERSED));
+                    }
+                    lines.push(line);
+                }
             }
         }
     }
@@ -134,7 +151,7 @@ fn draw_diff(frame: &mut Frame, app: &App, hl: &Highlighter, area: Rect) {
 
 fn draw_status(frame: &mut Frame, app: &App, area: Rect) {
     let text = format!(
-        " {} | {} | comments: {} | j/k move J/K file c comment V range d del w save q quit",
+        " {} | {} | comments: {} | j/k ^d/^u ^f/^b PgUp/Dn g/G move J/K file c comment V range d del w save q quit",
         app.scope,
         app.repo,
         app.comments.len()
@@ -237,6 +254,20 @@ mod tests {
         let out = render(&sample_app());
         assert!(out.contains("src/a.rs"), "file path missing:\n{out}");
         assert!(out.contains("+1"), "added count missing:\n{out}");
+    }
+
+    #[test]
+    fn renders_inline_comment_body() {
+        // sample_app は new_no 2 にコメント "hi" を持つ。インライン表示される。
+        let out = render(&sample_app());
+        assert!(out.contains("hi"), "inline comment body missing:\n{out}");
+    }
+
+    #[test]
+    fn viewport_height_excludes_status_and_borders() {
+        assert_eq!(viewport_height(20), 17);
+        assert_eq!(viewport_height(3), 1); // 最小 1 にクランプ
+        assert_eq!(viewport_height(0), 1);
     }
 
     #[test]
