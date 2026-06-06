@@ -9,7 +9,7 @@ use diffdeck::highlight::Highlighter;
 use diffdeck::run::{build_app, gitignore_warning, persist};
 use diffdeck::skill_install::{self, InstallOptions};
 use diffdeck::ui::app::App;
-use diffdeck::ui::render::draw;
+use diffdeck::ui::render::{draw, viewport_height};
 use ratatui::backend::CrosstermBackend;
 use ratatui::Terminal;
 use std::io::stdout;
@@ -86,6 +86,8 @@ fn run_tui(mut app: App, repo: &Path) -> anyhow::Result<()> {
     let result = (|| -> anyhow::Result<()> {
         loop {
             terminal.draw(|f| draw(f, &app, &hl))?;
+            // ページ移動量の算出のため、現在の端末高から表示行数を反映する。
+            app.viewport_h = viewport_height(terminal.size()?.height);
             if let Event::Key(key) = event::read()? {
                 app.on_key(key);
             }

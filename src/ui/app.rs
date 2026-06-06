@@ -2,7 +2,7 @@
 
 use crate::comment::{Comment, LineRange, Side};
 use crate::model::{FileDiff, LineKind};
-use crossterm::event::{KeyCode, KeyEvent};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Mode {
@@ -22,6 +22,10 @@ pub enum Row {
         new_no: Option<u32>,
         content: String,
     },
+    /// コメント対象行の直下に差し込むコメント本文。非ターゲット行。
+    Comment {
+        body: String,
+    },
 }
 
 #[derive(Debug)]
@@ -38,6 +42,8 @@ pub struct App {
     pub dirty: bool,
     pub should_quit: bool,
     pub save_requested: bool,
+    /// 直近フレームの差分ペイン表示行数。ページ移動量の算出に使う。
+    pub viewport_h: usize,
 }
 
 impl App {
@@ -55,6 +61,7 @@ impl App {
             dirty: false,
             should_quit: false,
             save_requested: false,
+            viewport_h: 0,
         }
     }
 
@@ -64,6 +71,7 @@ impl App {
         let Some(file) = self.files.get(self.file_cursor) else {
             return rows;
         };
+        let path = file.display_path().to_string();
         for hunk in &file.hunks {
             rows.push(Row::Header(format!(
                 "@@ -{},{} +{},{} @@ {}",
@@ -76,6 +84,28 @@ impl App {
                     new_no: line.new_no,
                     content: line.content.clone(),
                 });
+                // この行が指す (side, line_no) を求め、対象コメントを直下に差し込む。
+                let target = match line.kind {
+                    LineKind::Removed => line.old_no.map(|n| (Side::Old, n)),
+                    _ => line.new_no.map(|n| (Side::New, n)),
+                };
+                if let Some((side, line_no)) = target {
+                    for c in &self.comments {
+                        if c.file_path != path || c.position.side != side {
+                            continue;
+                        }
+                        // 単一行はその行、範囲は末尾行の直下に置く。
+                        let anchor = match &c.position.line {
+                            LineRange::Single(n) => *n,
+                            LineRange::Range { end, .. } => *end,
+                        };
+                        if anchor == line_no {
+                            rows.push(Row::Comment {
+                                body: c.body.clone(),
+                            });
+                        }
+                    }
+                }
             }
         }
         rows
@@ -88,7 +118,7 @@ impl App {
     /// 行 index から (side, line_no) を導出する。Header 行は None。
     fn target_at(&self, idx: usize) -> Option<(Side, u32)> {
         match self.rows().get(idx)? {
-            Row::Header(_) => None,
+            Row::Header(_) | Row::Comment { .. } => None,
             Row::Diff {
                 kind,
                 old_no,
@@ -115,8 +145,42 @@ impl App {
         }
     }
 
+    /// 半ページ移動量（最小 1 行）。
+    fn half_page(&self) -> usize {
+        (self.viewport_h / 2).max(1)
+    }
+
+    /// 全ページ移動量（最小 1 行）。
+    fn full_page(&self) -> usize {
+        self.viewport_h.max(1)
+    }
+
+    /// カーソルを delta だけ動かし、0..=末尾にクランプする。
+    fn move_cursor_by(&mut self, delta: isize) {
+        let max = self.row_count().saturating_sub(1) as isize;
+        let next = (self.line_cursor as isize + delta).clamp(0, max);
+        self.line_cursor = next as usize;
+    }
+
     fn on_key_nav(&mut self, key: KeyEvent) {
+        // Ctrl 系はここで消費する（素の d=削除 と衝突させないため）。
+        if key.modifiers.contains(KeyModifiers::CONTROL) {
+            match key.code {
+                KeyCode::Char('d') => self.move_cursor_by(self.half_page() as isize),
+                KeyCode::Char('u') => self.move_cursor_by(-(self.half_page() as isize)),
+                KeyCode::Char('f') => self.move_cursor_by(self.full_page() as isize),
+                KeyCode::Char('b') => self.move_cursor_by(-(self.full_page() as isize)),
+                _ => {}
+            }
+            return;
+        }
         match key.code {
+            KeyCode::PageDown => self.move_cursor_by(self.full_page() as isize),
+            KeyCode::PageUp => self.move_cursor_by(-(self.full_page() as isize)),
+            KeyCode::Char('g') => self.line_cursor = 0,
+            KeyCode::Char('G') => {
+                self.line_cursor = self.row_count().saturating_sub(1);
+            }
             KeyCode::Char('j') => {
                 let max = self.row_count().saturating_sub(1);
                 if self.line_cursor < max {
@@ -268,6 +332,39 @@ mod tests {
 
     fn key(c: char) -> KeyEvent {
         KeyEvent::from(KeyCode::Char(c))
+    }
+
+    fn ctrl(c: char) -> KeyEvent {
+        KeyEvent::new(KeyCode::Char(c), KeyModifiers::CONTROL)
+    }
+
+    /// 1 ファイル・20 行(new_no 1..=20)の App。viewport_h を明示できる。
+    fn tall(line_cursor: usize, viewport_h: usize) -> App {
+        let lines: Vec<Line> = (0..20)
+            .map(|i| Line {
+                kind: LineKind::Added,
+                old_no: None,
+                new_no: Some(i as u32 + 1),
+                content: format!("l{i}"),
+            })
+            .collect();
+        let f = FileDiff {
+            old_path: Some("f.txt".into()),
+            new_path: Some("f.txt".into()),
+            is_binary: false,
+            hunks: vec![Hunk {
+                old_start: 1,
+                old_lines: 0,
+                new_start: 1,
+                new_lines: 20,
+                header: "h".into(),
+                lines,
+            }],
+        };
+        let mut a = App::new(vec![f], vec![], "/repo".into(), "working".into());
+        a.line_cursor = line_cursor;
+        a.viewport_h = viewport_h;
+        a
     }
 
     fn file(path: &str) -> FileDiff {
@@ -476,5 +573,121 @@ mod tests {
         a.on_key(key('c'));
         assert_eq!(a.mode, Mode::Normal);
         assert!(a.comments.is_empty());
+    }
+
+    // --- B: インラインコメント行 ---
+
+    #[test]
+    fn comment_row_inserted_below_single_line() {
+        let mut a = app();
+        a.on_key(key('j')); // cursor=1 -> new_no 2
+        a.on_key(key('c'));
+        for ch in "note".chars() {
+            a.on_key(key(ch));
+        }
+        a.on_key(KeyEvent::from(KeyCode::Enter));
+        // rows: 0 Header, 1 Diff(2), 2 Comment, 3 Diff(3), 4 Diff(4)
+        let rows = a.rows();
+        assert_eq!(rows.len(), 5);
+        assert!(matches!(&rows[2], Row::Comment { body } if body == "note"));
+    }
+
+    #[test]
+    fn range_comment_inserted_below_end_line() {
+        let mut a = app();
+        a.on_key(key('j')); // new_no 2
+        a.on_key(key('V')); // anchor
+        a.on_key(key('j')); // new_no 3
+        a.on_key(key('c'));
+        a.on_key(key('r'));
+        a.on_key(KeyEvent::from(KeyCode::Enter));
+        // 範囲 2..3 は末尾行(new_no 3)の直下に置く。
+        // rows: 0 H, 1 D(2), 2 D(3), 3 Comment, 4 D(4)
+        let rows = a.rows();
+        assert!(matches!(rows[3], Row::Comment { .. }));
+    }
+
+    #[test]
+    fn comment_row_is_not_a_target() {
+        let mut a = app();
+        a.on_key(key('j'));
+        a.on_key(key('c'));
+        a.on_key(key('x'));
+        a.on_key(KeyEvent::from(KeyCode::Enter));
+        // コメント行(index 2)へカーソルを置く。
+        a.line_cursor = 2;
+        a.on_key(key('c')); // 非ターゲットなので no-op
+        assert_eq!(a.mode, Mode::Normal);
+        a.on_key(key('d')); // 非ターゲットなので削除されない
+        assert_eq!(a.comments.len(), 1);
+    }
+
+    // --- C: 移動キー フルセット ---
+
+    #[test]
+    fn ctrl_d_u_move_half_page() {
+        let mut a = tall(0, 10); // half = 5
+        a.on_key(ctrl('d'));
+        assert_eq!(a.line_cursor, 5);
+        a.on_key(ctrl('d'));
+        assert_eq!(a.line_cursor, 10);
+        a.on_key(ctrl('u'));
+        assert_eq!(a.line_cursor, 5);
+    }
+
+    #[test]
+    fn ctrl_f_b_move_full_page() {
+        let mut a = tall(0, 8); // full = 8
+        a.on_key(ctrl('f'));
+        assert_eq!(a.line_cursor, 8);
+        a.on_key(ctrl('b'));
+        assert_eq!(a.line_cursor, 0);
+    }
+
+    #[test]
+    fn page_keys_move_full_page() {
+        let mut a = tall(0, 6);
+        a.on_key(KeyEvent::from(KeyCode::PageDown));
+        assert_eq!(a.line_cursor, 6);
+        a.on_key(KeyEvent::from(KeyCode::PageUp));
+        assert_eq!(a.line_cursor, 0);
+    }
+
+    #[test]
+    fn g_and_shift_g_jump_to_ends() {
+        let mut a = tall(5, 10);
+        let last = a.rows().len() - 1;
+        a.on_key(key('G'));
+        assert_eq!(a.line_cursor, last);
+        a.on_key(key('g'));
+        assert_eq!(a.line_cursor, 0);
+    }
+
+    #[test]
+    fn movement_clamps_at_bounds() {
+        let mut a = tall(0, 10);
+        let last = a.rows().len() - 1;
+        for _ in 0..10 {
+            a.on_key(ctrl('d'));
+        }
+        assert_eq!(a.line_cursor, last);
+        for _ in 0..10 {
+            a.on_key(ctrl('u'));
+        }
+        assert_eq!(a.line_cursor, 0);
+    }
+
+    #[test]
+    fn ctrl_d_is_page_move_not_delete() {
+        // Ctrl+D はページ移動であって、素の d(削除)ではない。
+        let mut a = app();
+        a.on_key(key('j'));
+        a.on_key(key('c'));
+        a.on_key(key('x'));
+        a.on_key(KeyEvent::from(KeyCode::Enter));
+        a.viewport_h = 4;
+        a.line_cursor = 1;
+        a.on_key(ctrl('d'));
+        assert_eq!(a.comments.len(), 1);
     }
 }
