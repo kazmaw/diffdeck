@@ -5,9 +5,9 @@ use crossterm::terminal::{
     disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
 };
 use diffdeck::cli::{Cli, Command, InstallSkillArgs};
-use diffdeck::skill_install::{self, InstallOptions};
 use diffdeck::highlight::Highlighter;
 use diffdeck::run::{build_app, gitignore_warning, persist};
+use diffdeck::skill_install::{self, InstallOptions};
 use diffdeck::ui::app::App;
 use diffdeck::ui::render::draw;
 use ratatui::backend::CrosstermBackend;
