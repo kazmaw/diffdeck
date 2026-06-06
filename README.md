@@ -17,14 +17,44 @@ loop local: review in the terminal, save comments to a file, let Claude Code pic
 
 ## Install
 
-Requires a Rust toolchain (`cargo`).
+### npx / npm (no Rust needed)
 
 ```bash
-# from a clone of this repo
-cargo install --path .
+# run without installing
+npx diffdeck
 
-# or run without installing
-cargo run --release -- <args>
+# or install globally
+npm i -g diffdeck
+```
+
+Prebuilt binaries are shipped as per-OS packages (`@diffdeck/cli-*`) and selected
+automatically. Supported: macOS (arm64/x64), Linux (x64), Windows (x64). On an
+unsupported platform the launcher tells you to use `cargo install diffdeck` instead.
+
+### cargo (Rust users)
+
+```bash
+cargo install diffdeck
+
+# or from a clone of this repo
+cargo install --path .
+```
+
+### AI skill (Claude Code)
+
+diffdeck ships a companion skill that lets Claude Code launch the reviewer and apply
+your comments. Install it explicitly:
+
+```bash
+# installs to ~/.claude/skills/diffdeck/SKILL.md
+diffdeck install-skill
+
+# preview without writing
+diffdeck install-skill --print
+
+# install to a custom directory / overwrite
+diffdeck install-skill --dir ./some/dir
+diffdeck install-skill --force
 ```
 
 ## Usage
@@ -120,3 +150,15 @@ The codebase is split into single-responsibility modules: `model` (domain types)
 (arg → `DiffSpec`), `diff_parse` (pure unified-diff parser), `git` (git execution),
 `comments` (persistence), `highlight` (syntect), `ui::app` (terminal-independent state
 machine), `ui::render` (ratatui drawing), and `run`/`main` (wiring and the terminal loop).
+
+## Releasing (maintainers)
+
+Releases are automated by `.github/workflows/release.yml` on a `v*` tag whose number
+matches `Cargo.toml`:
+
+1. Bump `version` in `Cargo.toml`, commit.
+2. `git tag vX.Y.Z && git push origin vX.Y.Z`.
+
+CI cross-builds, attaches binaries to the GitHub Release, publishes the npm packages
+(main + `@diffdeck/cli-*`), and runs `cargo publish`. Required GitHub secrets:
+`NPM_TOKEN` and `CARGO_REGISTRY_TOKEN`.
