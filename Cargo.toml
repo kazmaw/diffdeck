@@ -3,6 +3,13 @@ name = "diffdeck"
 version = "0.1.0"
 edition = "2021"
 description = "Fast in-terminal diff viewer that emits difit-compatible line comments for Claude Code"
+license = "MIT"
+repository = "https://github.com/kazmaw/diffdeck"
+homepage = "https://github.com/kazmaw/diffdeck"
+readme = "README.md"
+keywords = ["diff", "tui", "git", "review", "claude"]
+categories = ["command-line-utilities", "development-tools"]
+authors = ["kazmaw"]
 
 [[bin]]
 name = "diffdeck"
