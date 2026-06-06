@@ -1,40 +1,51 @@
 # diffdeck
 
-> **⚠️ このプロジェクトは開発を終了しました（2026-06-06）。**
+> **⚠️ This project is no longer maintained (development stopped 2026-06-06).**
 >
-> 動くものは残っていますが、これ以上のメンテナンスはしません。以下は「何を目指して、なぜ畳んだか」の記録です。
+> What exists still works, but there will be no further maintenance. The notes below record
+> what it aimed for and why it was shelved.
 
-## 開発をやめた理由
+## Why development stopped
 
-### 目指していたもの（理想）
+### What it aimed for (the ideal)
 
-人間・TUI・LLM（Claude Code）の三者が一つのローカルループとして滑らかに回ることを狙っていました。
+The goal was to make three parties — the human, the TUI, and the LLM (Claude Code) — turn as
+one smooth local loop:
 
-1. エージェントが diff を出す
-2. 人間がターミナル上の TUI で行コメントを残す
-3. LLM がそのコメントを拾って、そのまま修正に反映する
+1. The agent produces a diff.
+2. The human leaves line comments in a terminal TUI.
+3. The LLM picks those comments up and applies the fixes directly.
 
-「ブラウザを開かずシェルの中だけでレビューが完結し、コメントがそのままエージェントへの指示になる」——これが理想でした。
+The ideal was a review that completes entirely inside the shell — no browser — where the
+comments themselves become the instructions to the agent.
 
-### 実際にぶつかった問題
+### The problems we actually hit
 
-最大の壁は **LLM ↔ TUI の連携がうまくいかなかった** ことです。理想に対して、構造的に次の問題が残りました。
+The biggest wall was that **the LLM ↔ TUI integration never worked well.** Against the ideal,
+these problems were structural and stuck:
 
-- **TUI と LLM が同じターミナルを共有できない**
-  - TUI は実 tty を占有するため、Claude Code のペイン内では動かせません。
-  - 結果として別ウィンドウへ spawn するしかなく、起動環境（tmux / Terminal.app / iTerm2 / Linux GUI）依存で壊れやすくなりました。
-  - エージェントが「起動・操作・観測」を一貫して担えず、ループの主導権が宙に浮きました。
+- **The TUI and the LLM cannot share one terminal.**
+  - A TUI owns a real tty, so it cannot run inside Claude Code's own pane.
+  - That forces it to spawn into a separate window, which is fragile and depends on the host
+    environment (tmux / Terminal.app / iTerm2 / Linux GUI).
+  - The agent cannot consistently launch, drive, and observe the TUI, so ownership of the loop
+    ends up in limbo.
 
-- **ハンドオフがファイル経由の一方通行になった**
-  - LLM は TUI の画面を直接見られず、`.diffdeck/comments.json` を介してしか結果を受け取れません。
-  - そのため対話的なリアルタイムループにならず、「起動 → レビュー → 保存 → 反映」という手動コーディネーションが最後まで残りました。
-  - 理想の「コメントがそのまま指示になる」滑らかさには届きませんでした。
+- **The hand-off became a one-way trip through a file.**
+  - The LLM cannot see the TUI screen; it can only receive results through
+    `.diffdeck/comments.json`.
+  - So it never became an interactive, real-time loop — the manual coordination of
+    "launch → review → save → apply" remained to the end.
+  - It never reached the ideal's smoothness, where a comment is the instruction.
 
-- **既存の web ベースレビューア（difit など）に対する優位を出しきれなかった**
-  - 差別化の核は「ターミナルで即起動」でしたが、肝心の LLM 連携が弱いままで、その利点が相殺されました。
-  - 「ターミナルで完結する」だけでは、ツールを乗り換える理由として弱かった、というのが結論です。
+- **It could not out-compete existing web-based reviewers (e.g. difit).**
+  - The core differentiator was "starts instantly in the terminal," but with the LLM
+    integration staying weak, that advantage was cancelled out.
+  - The conclusion: "it stays in the terminal" alone was too weak a reason to switch tools.
 
-総じて、**TUI という形態と、エージェントが全工程を駆動するという理想が構造的に噛み合いませんでした。** ここを設計で吸収する見通しが立たなかったため、開発を畳みます。
+In short, **the TUI form and the ideal of an agent driving the whole process were
+structurally mismatched.** With no clear way to absorb that in the design, development is
+being shelved.
 
 ---
 
